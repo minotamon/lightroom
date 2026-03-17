@@ -2,37 +2,58 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>3分割 Grayscale Demo</title>
 <style>
-body{
+html, body{
   margin:0;
+  padding:0;
+  overflow:hidden; /* スクロール防止 */
+  touch-action:none; /* 画面のパン防止 */
   font-family:sans-serif;
   background:#111;
   color:#eee;
+}
+
+.wrapper{
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   height:100vh;
 }
+
 canvas{
   border:1px solid #444;
+  width:90vw;           /* 見た目だけ可変 */
+  max-width:600px;
+  height:auto;
 }
+
 .controls{
+  width:90vw;
+  max-width:600px;
   margin-top:10px;
-  width:600px;
 }
-label{display:block;margin:5px 0;}
+
+label{display:block;margin:6px 0;}
+
+input[type="range"]{
+  width:100%;
+  touch-action:pan-x; /* 横操作のみ許可 */
+}
 </style>
 </head>
 <body>
 
-<canvas id="canvas" width="600" height="120"></canvas>
+<div class="wrapper">
+  <!-- 内部解像度は固定（ここ重要） -->
+  <canvas id="canvas" width="600" height="120"></canvas>
 
-<div class="controls">
-  <label>ブレンド: <input type="range" id="blend" min="0" max="100" value="50"></label>
-  <label>バランス: <input type="range" id="balance" min="-100" max="100" value="0"></label>
+  <div class="controls">
+    <label>ブレンド: <input type="range" id="blend" min="0" max="100" value="50"></label>
+    <label>バランス: <input type="range" id="balance" min="-100" max="100" value="0"></label>
+  </div>
 </div>
 
 <script>
@@ -47,6 +68,8 @@ function smoothstep(edge0, edge1, x) {
   t = Math.max(0, Math.min(1, t));
   return t * t * (3 - 2 * t);
 }
+
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 
 function draw(){
   const w = canvas.width;
@@ -85,7 +108,7 @@ function draw(){
 
   ctx.putImageData(img, 0, 0);
 
-  // === ラベル描画（Balanceに追従） ===
+  // === ラベル描画（見える状態を維持） ===
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "14px sans-serif";
@@ -95,19 +118,17 @@ function draw(){
     ctx.strokeStyle = "rgba(0,0,0,0.8)";
     ctx.strokeText(text, x, y);
 
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.fillText(text, x, y);
   }
 
-  // 各領域の代表位置を計算
   let center = 0.5 - balance * 0.25;
   let shadowEnd = center - 0.2;
   let highlightStart = center + 0.2;
 
-  // 位置（0〜1 → canvas座標）
-  let shadowX = (shadowEnd * 0.5) * w;          // シャドウ中央
-  let midX = center * w;                       // 中間調中心
-  let highlightX = ((1 + highlightStart) * 0.5) * w; // ハイライト中央
+  let shadowX = clamp01(shadowEnd * 0.5) * w;
+  let midX = clamp01(center) * w;
+  let highlightX = clamp01((1 + highlightStart) * 0.5) * w;
 
   drawText("シャドウ", shadowX, h / 2);
   drawText("中間調", midX, h / 2);
@@ -121,4 +142,3 @@ draw();
 </script>
 </body>
 </html>
-
