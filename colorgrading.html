@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3分割 Grayscale Demo</title>
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#111;
+  color:#eee;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+canvas{
+  border:1px solid #444;
+}
+.controls{
+  margin-top:10px;
+  width:600px;
+}
+label{display:block;margin:5px 0;}
+</style>
+</head>
+<body>
+
+<canvas id="canvas" width="600" height="120"></canvas>
+
+<div class="controls">
+  <label>ブレンド: <input type="range" id="blend" min="0" max="100" value="50"></label>
+  <label>バランス: <input type="range" id="balance" min="-100" max="100" value="0"></label>
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const blendSlider = document.getElementById("blend");
+const balanceSlider = document.getElementById("balance");
+
+function smoothstep(edge0, edge1, x) {
+  let t = (x - edge0) / (edge1 - edge0);
+  t = Math.max(0, Math.min(1, t));
+  return t * t * (3 - 2 * t);
+}
+
+function draw(){
+  const w = canvas.width;
+  const h = canvas.height;
+
+  const blend = blendSlider.value / 100;
+  const balance = balanceSlider.value / 100;
+
+  const img = ctx.createImageData(w, h);
+
+  for(let x=0; x<w; x++){
+    let t = x / w;
+
+    let center = 0.5 - balance * 0.25;
+    let shadowEnd = center - 0.2;
+    let highlightStart = center + 0.2;
+
+    let width = 0.02 + blend * 0.2;
+
+    let shadowW = 1 - smoothstep(shadowEnd - width, shadowEnd + width, t);
+    let highlightW = smoothstep(highlightStart - width, highlightStart + width, t);
+    let midW = 1 - shadowW - highlightW;
+
+    let value = 0 * shadowW + 0.5 * midW + 1.0 * highlightW;
+
+    for(let y=0; y<h; y++){
+      let i = (y*w + x) * 4;
+      let v = value * 255;
+
+      img.data[i] = v;
+      img.data[i+1] = v;
+      img.data[i+2] = v;
+      img.data[i+3] = 255;
+    }
+  }
+
+  ctx.putImageData(img, 0, 0);
+
+  // === ラベル描画（Balanceに追従） ===
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "14px sans-serif";
+
+  function drawText(text, x, y){
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.8)";
+    ctx.strokeText(text, x, y);
+
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillText(text, x, y);
+  }
+
+  // 各領域の代表位置を計算
+  let center = 0.5 - balance * 0.25;
+  let shadowEnd = center - 0.2;
+  let highlightStart = center + 0.2;
+
+  // 位置（0〜1 → canvas座標）
+  let shadowX = (shadowEnd * 0.5) * w;          // シャドウ中央
+  let midX = center * w;                       // 中間調中心
+  let highlightX = ((1 + highlightStart) * 0.5) * w; // ハイライト中央
+
+  drawText("シャドウ", shadowX, h / 2);
+  drawText("中間調", midX, h / 2);
+  drawText("ハイライト", highlightX, h / 2);
+}
+
+blendSlider.oninput = draw;
+balanceSlider.oninput = draw;
+
+draw();
+</script>
+</body>
+</html>
+
